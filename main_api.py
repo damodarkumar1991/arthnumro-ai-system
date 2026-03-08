@@ -116,6 +116,111 @@ def get_leads():
         'leads': list(leads_db.values())
     })
 
+@app.route('/api/reports/generate-full', methods=['POST'])
+def generate_full_report():
+    """Generate complete AI-powered numerology report"""
+    try:
+        import os
+        from anthropic import Anthropic
+        
+        data = request.json
+        name = data.get('name')
+        birthdate = data.get('birthdate')
+        email = data.get('email')
+        
+        if not name or not birthdate:
+            return jsonify({'error': 'Name and birthdate required'}), 400
+        
+        # Calculate Life Path number
+        life_path_result = calculate_life_path(birthdate)
+        life_path = life_path_result['number']
+        
+        # Initialize Claude
+        api_key = os.environ.get('ANTHROPIC_API_KEY')
+        if not api_key:
+            return jsonify({'error': 'API key not configured'}), 500
+            
+        client = Anthropic(api_key=api_key)
+        
+        # Generate AI report
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=3000,
+            messages=[{
+                "role": "user",
+                "content": f"""You are an expert numerologist creating a personalized reading.
+
+Generate a detailed numerology report for:
+Name: {name}
+Life Path Number: {life_path}
+
+Structure the report with these sections (use markdown headers):
+
+# YOUR NUMEROLOGY REPORT
+**Prepared for {name}**
+
+## LIFE PATH {life_path}: YOUR SOUL'S JOURNEY
+
+Write 3-4 paragraphs covering:
+- The core essence and meaning of Life Path {life_path}
+- Natural talents, gifts, and strengths
+- Life lessons and growth opportunities
+- How to live in alignment with this path
+
+## CAREER & LIFE PURPOSE
+
+Write 2-3 paragraphs about:
+- Ideal career directions and work environments
+- How to use natural talents professionally
+- Keys to success and fulfillment
+
+## RELATIONSHIPS & LOVE
+
+Write 2-3 paragraphs covering:
+- Relationship patterns and needs
+- What you bring to partnerships
+- Best compatibility and what to look for
+
+## PERSONAL GROWTH GUIDANCE
+
+Write 2-3 paragraphs with:
+- Areas for spiritual development
+- Practical steps for growth
+- Empowering affirmations
+
+Write in a warm, insightful, and empowering tone. Be specific and personal to {name}. Avoid generic advice."""
+            }]
+        )
+        
+        # Extract report content
+        report_content = message.content[0].text
+        
+        # Store lead with purchase flag
+        if email:
+            lead_id = f"lead_{datetime.now().timestamp()}"
+            leads_db[lead_id] = {
+                'id': lead_id,
+                'email': email,
+                'name': name,
+                'birthdate': birthdate,
+                'life_path': life_path,
+                'created_at': datetime.now().isoformat(),
+                'purchased_full_report': True
+            }
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'name': name,
+                'life_path': life_path,
+                'report': report_content,
+                'generated_at': datetime.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error generating report: {e}")
+        return jsonify({'error': str(e)}), 500 
 if __name__ == '__main__':
     print("🚀 Starting Arthnumro AI Automation Server...")
     print("📍 Health Check: http://localhost:5000/health")
