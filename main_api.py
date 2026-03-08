@@ -115,13 +115,12 @@ def get_leads():
         'count': len(leads_db),
         'leads': list(leads_db.values())
     })
-
 @app.route('/api/reports/generate-full', methods=['POST'])
 def generate_full_report():
     """Generate complete AI-powered numerology report"""
     try:
         import os
-        from anthropic import Anthropic
+        import anthropic
         
         data = request.json
         name = data.get('name')
@@ -135,12 +134,12 @@ def generate_full_report():
         life_path_result = calculate_life_path(birthdate)
         life_path = life_path_result['number']
         
-        # Initialize Claude
+        # Initialize Claude - simplified version
         api_key = os.environ.get('ANTHROPIC_API_KEY')
         if not api_key:
             return jsonify({'error': 'API key not configured'}), 500
             
-        client = Anthropic(api_key=api_key)
+        client = anthropic.Anthropic(api_key=api_key)
         
         # Generate AI report
         message = client.messages.create(
@@ -154,16 +153,16 @@ Generate a detailed numerology report for:
 Name: {name}
 Life Path Number: {life_path}
 
-Structure the report with these sections (use markdown headers):
+Structure the report with these sections:
 
 # YOUR NUMEROLOGY REPORT
-**Prepared for {name}**
+Prepared for {name}
 
 ## LIFE PATH {life_path}: YOUR SOUL'S JOURNEY
 
 Write 3-4 paragraphs covering:
 - The core essence and meaning of Life Path {life_path}
-- Natural talents, gifts, and strengths
+- Natural talents, gifts, and strengths  
 - Life lessons and growth opportunities
 - How to live in alignment with this path
 
@@ -219,8 +218,10 @@ Write in a warm, insightful, and empowering tone. Be specific and personal to {n
         })
         
     except Exception as e:
-        print(f"Error generating report: {e}")
-        return jsonify({'error': str(e)}), 500 
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Error generating report: {error_detail}")
+        return jsonify({'error': str(e), 'detail': error_detail}), 500
 if __name__ == '__main__':
     print("🚀 Starting Arthnumro AI Automation Server...")
     print("📍 Health Check: http://localhost:5000/health")
