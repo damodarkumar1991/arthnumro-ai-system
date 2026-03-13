@@ -420,15 +420,192 @@ Write 3-4 final paragraphs:
                 'purchased_full_report': True
             }
         
-    # Send email with report
+   # Generate PDF and send via email
         try:
             import resend
+            from reportlab.lib.pagesizes import letter
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.units import inch
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
+            from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+            from reportlab.lib.colors import HexColor
+            import base64
+            
             resend.api_key = os.environ.get('RESEND_API_KEY')
             
+            # Generate PDF in memory
+            pdf_buffer = BytesIO()
+            doc = SimpleDocTemplate(
+                pdf_buffer,
+                pagesize=letter,
+                topMargin=0.5*inch,
+                bottomMargin=0.75*inch,
+                leftMargin=1*inch,
+                rightMargin=1*inch
+            )
+            
+            # Styles
+            styles = getSampleStyleSheet()
+            
+            cover_title = ParagraphStyle(
+                'CoverTitle',
+                parent=styles['Heading1'],
+                fontSize=36,
+                textColor=HexColor('#667eea'),
+                spaceAfter=20,
+                alignment=TA_CENTER,
+                fontName='Helvetica-Bold'
+            )
+            
+            cover_subtitle = ParagraphStyle(
+                'CoverSubtitle',
+                parent=styles['Normal'],
+                fontSize=18,
+                textColor=HexColor('#764ba2'),
+                spaceAfter=40,
+                alignment=TA_CENTER,
+                fontName='Helvetica'
+            )
+            
+            h1_style = ParagraphStyle(
+                'CustomH1',
+                parent=styles['Heading1'],
+                fontSize=20,
+                textColor=HexColor('#667eea'),
+                spaceAfter=15,
+                spaceBefore=30,
+                fontName='Helvetica-Bold',
+                borderWidth=2,
+                borderColor=HexColor('#667eea'),
+                borderPadding=10,
+                backColor=HexColor('#f0f4ff')
+            )
+            
+            h2_style = ParagraphStyle(
+                'CustomH2',
+                parent=styles['Heading2'],
+                fontSize=16,
+                textColor=HexColor('#34495e'),
+                spaceAfter=12,
+                spaceBefore=20,
+                fontName='Helvetica-Bold',
+                borderWidth=1,
+                borderColor=HexColor('#e2e8f0'),
+                borderPadding=5
+            )
+            
+            h3_style = ParagraphStyle(
+                'CustomH3',
+                parent=styles['Heading3'],
+                fontSize=13,
+                textColor=HexColor('#2c3e50'),
+                spaceAfter=8,
+                spaceBefore=12,
+                fontName='Helvetica-Bold'
+            )
+            
+            body_style = ParagraphStyle(
+                'CustomBody',
+                parent=styles['BodyText'],
+                fontSize=11,
+                leading=16,
+                spaceAfter=10,
+                alignment=TA_JUSTIFY,
+                fontName='Helvetica'
+            )
+            
+            # Build PDF
+            story = []
+            
+            # Cover page
+            story.append(Spacer(1, 2.5*inch))
+            story.append(Paragraph("✨ YOUR PREMIUM NUMEROLOGY REPORT ✨", cover_title))
+            story.append(Paragraph("Complete Life Blueprint & Guidance", cover_subtitle))
+            story.append(Spacer(1, 0.5*inch))
+            
+            cover_data = [
+                ['Prepared For:', name],
+                ['Life Path Number:', str(life_path)],
+                ['Birth Date:', birthdate],
+                ['Birth Time:', birthtime],
+                ['Birth Place:', birthplace],
+                ['Report Generated:', datetime.now().strftime('%B %d, %Y')]
+            ]
+            
+            cover_table = Table(cover_data, colWidths=[2*inch, 4*inch])
+            cover_table.setStyle(TableStyle([
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 12),
+                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                ('TEXTCOLOR', (0, 0), (0, -1), HexColor('#667eea')),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LINEBELOW', (0, 0), (-1, -2), 1, HexColor('#e2e8f0')),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ]))
+            
+            story.append(cover_table)
+            story.append(Spacer(1, 1*inch))
+            
+            footer = Paragraph(
+                "This report is a personalized analysis created exclusively for you.<br/>© Arthnumro - Premium Numerology Services",
+                ParagraphStyle('Footer', parent=body_style, fontSize=9, textColor=HexColor('#718096'), alignment=TA_CENTER)
+            )
+            story.append(footer)
+            story.append(PageBreak())
+            
+            # Process report content
+            lines = full_report.split('\n')
+            
+            for line in lines:
+                line = line.strip()
+                
+                if not line:
+                    story.append(Spacer(1, 0.1*inch))
+                    continue
+                
+                if line.startswith('---'):
+                    story.append(Spacer(1, 0.2*inch))
+                    continue
+                
+                if line.startswith('# '):
+                    text = line.replace('# ', '').strip()
+                    story.append(PageBreak())
+                    story.append(Paragraph(text, h1_style))
+                
+                elif line.startswith('## '):
+                    text = line.replace('## ', '').strip()
+                    story.append(Spacer(1, 0.15*inch))
+                    story.append(Paragraph(text, h2_style))
+                
+                elif line.startswith('### '):
+                    text = line.replace('### ', '').strip()
+                    story.append(Paragraph(text, h3_style))
+                
+                else:
+                    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
+                    text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<i>\1</i>', text)
+                    
+                    try:
+                        story.append(Paragraph(text, body_style))
+                    except:
+                        cleaned = text.replace('<', '&lt;').replace('>', '&gt;')
+                        story.append(Paragraph(cleaned, body_style))
+            
+            # Build PDF
+            doc.build(story)
+            
+            # Get PDF data and encode for email
+            pdf_data = pdf_buffer.getvalue()
+            pdf_buffer.close()
+            pdf_base64 = base64.b64encode(pdf_data).decode('utf-8')
+            
+            # Send email with PDF attachment
             email_params = {
                 "from": "Arthnumro Reports <reports@arthnumro.com>",
                 "to": [email],
-                "subject": f"✨ Your Premium Numerology Report is Ready, {name}!",
+                "subject": f"✨ Your Premium Numerology Report - {name}",
                 "html": f"""
 <!DOCTYPE html>
 <html>
@@ -438,9 +615,9 @@ Write 3-4 final paragraphs:
         .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
         .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 10px 10px 0 0; }}
         .content {{ background: #ffffff; padding: 30px; border: 1px solid #e2e8f0; }}
-        .button {{ display: inline-block; padding: 15px 30px; background: #16a085; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }}
         .footer {{ background: #f9fafb; padding: 20px; text-align: center; font-size: 0.9em; color: #718096; border-radius: 0 0 10px 10px; }}
         .details {{ background: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+        .highlight {{ background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107; }}
     </style>
 </head>
 <body>
@@ -453,7 +630,12 @@ Write 3-4 final paragraphs:
         <div class="content">
             <p>Dear {name},</p>
             
-            <p>Thank you for your purchase! Your personalized numerology report has been successfully generated.</p>
+            <p>Thank you for your purchase! Your personalized numerology report is attached to this email as a professional PDF.</p>
+            
+            <div class="highlight">
+                <p style="margin: 0; font-weight: bold; font-size: 1.1em;">📎 Your report is attached as a PDF file</p>
+                <p style="margin: 5px 0 0 0;">Download and save it for lifetime access!</p>
+            </div>
             
             <div class="details">
                 <strong>Your Report Details:</strong><br>
@@ -461,32 +643,30 @@ Write 3-4 final paragraphs:
                 📅 Birth Date: {birthdate}<br>
                 ⏰ Birth Time: {birthtime}<br>
                 📍 Birth Place: {birthplace}<br>
-                📄 Report Length: 5,000+ words
+                📄 Report Length: 5,000+ words<br>
+                📥 Format: Professional PDF
             </div>
             
-            <p><strong>To access your full report:</strong></p>
-            
-            <div style="text-align: center;">
-                <a href="https://www.arthnumro.com/pages/generate-report" class="button">
-                    📖 View Your Report Online
-                </a>
-            </div>
-            
-            <p style="margin-top: 30px;"><strong>What's included in your report:</strong></p>
+            <p><strong>What's included in your report:</strong></p>
             <ul>
                 <li>Executive Summary of your life purpose</li>
                 <li>Past, Present & Future timeline analysis</li>
                 <li>Career & financial guidance</li>
-                <li>Love & relationship compatibility</li>
+                <li>Love & relationship compatibility (all 12 types)</li>
                 <li>Health & wellness recommendations</li>
                 <li>Spiritual development path</li>
                 <li>90-day action plan</li>
                 <li>20 personalized affirmations</li>
             </ul>
             
-            <p><strong>💡 Tip:</strong> Bookmark the report page for easy access anytime!</p>
+            <p><strong>💡 Tips:</strong></p>
+            <ul>
+                <li>Save the PDF to your device for easy access</li>
+                <li>Print it and keep it as a reference guide</li>
+                <li>Review it regularly to track your progress</li>
+            </ul>
             
-            <p style="margin-top: 30px;">If you have any questions, reply to this email.</p>
+            <p style="margin-top: 30px;">If you have any questions or need assistance, simply reply to this email.</p>
             
             <p>To your highest potential,<br>
             <strong>The Arthnumro Team</strong></p>
@@ -499,14 +679,22 @@ Write 3-4 final paragraphs:
     </div>
 </body>
 </html>
-"""
+""",
+                "attachments": [
+                    {
+                        "filename": f"Numerology_Report_{name.replace(' ', '_')}.pdf",
+                        "content": pdf_base64
+                    }
+                ]
             }
             
             resend.Emails.send(email_params)
-            print(f"✅ Email sent successfully to {email}")
+            print(f"✅ Email with PDF sent successfully to {email}")
             
         except Exception as e:
             print(f"⚠️ Email sending failed: {e}")
+            import traceback
+            print(traceback.format_exc())
         
         return jsonify({
             'success': True,
