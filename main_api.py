@@ -420,6 +420,94 @@ Write 3-4 final paragraphs:
                 'purchased_full_report': True
             }
         
+    # Send email with report
+        try:
+            import resend
+            resend.api_key = os.environ.get('RESEND_API_KEY')
+            
+            email_params = {
+                "from": "Arthnumro Reports <reports@arthnumro.com>",
+                "to": [email],
+                "subject": f"✨ Your Premium Numerology Report is Ready, {name}!",
+                "html": f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+        .content {{ background: #ffffff; padding: 30px; border: 1px solid #e2e8f0; }}
+        .button {{ display: inline-block; padding: 15px 30px; background: #16a085; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }}
+        .footer {{ background: #f9fafb; padding: 20px; text-align: center; font-size: 0.9em; color: #718096; border-radius: 0 0 10px 10px; }}
+        .details {{ background: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0;">✨ Your Numerology Report is Ready!</h1>
+            <p style="margin: 10px 0 0 0; font-size: 1.1em;">Premium Life Blueprint Analysis</p>
+        </div>
+        
+        <div class="content">
+            <p>Dear {name},</p>
+            
+            <p>Thank you for your purchase! Your personalized numerology report has been successfully generated.</p>
+            
+            <div class="details">
+                <strong>Your Report Details:</strong><br>
+                📊 Life Path Number: {life_path}<br>
+                📅 Birth Date: {birthdate}<br>
+                ⏰ Birth Time: {birthtime}<br>
+                📍 Birth Place: {birthplace}<br>
+                📄 Report Length: 5,000+ words
+            </div>
+            
+            <p><strong>To access your full report:</strong></p>
+            
+            <div style="text-align: center;">
+                <a href="https://www.arthnumro.com/pages/generate-report" class="button">
+                    📖 View Your Report Online
+                </a>
+            </div>
+            
+            <p style="margin-top: 30px;"><strong>What's included in your report:</strong></p>
+            <ul>
+                <li>Executive Summary of your life purpose</li>
+                <li>Past, Present & Future timeline analysis</li>
+                <li>Career & financial guidance</li>
+                <li>Love & relationship compatibility</li>
+                <li>Health & wellness recommendations</li>
+                <li>Spiritual development path</li>
+                <li>90-day action plan</li>
+                <li>20 personalized affirmations</li>
+            </ul>
+            
+            <p><strong>💡 Tip:</strong> Bookmark the report page for easy access anytime!</p>
+            
+            <p style="margin-top: 30px;">If you have any questions, reply to this email.</p>
+            
+            <p>To your highest potential,<br>
+            <strong>The Arthnumro Team</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>© {datetime.now().year} Arthnumro - Premium Numerology Services<br>
+            <a href="https://www.arthnumro.com" style="color: #667eea;">www.arthnumro.com</a></p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+            }
+            
+            resend.Emails.send(email_params)
+            print(f"✅ Email sent successfully to {email}")
+            
+        except Exception as e:
+            print(f"⚠️ Email sending failed: {e}")
+        
         return jsonify({
             'success': True,
             'data': {
