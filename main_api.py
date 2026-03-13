@@ -6,7 +6,13 @@ from io import BytesIO
 import re
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["*"],  # Allow all origins for now
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # In-memory storage (in production, use a database)
 leads_db = {}
@@ -143,7 +149,7 @@ def generate_full_report():
         
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=10000,
+            max_tokens=5000,
             messages=[{
                 "role": "user",
                 "content": f"""You are a master numerologist, past life regression therapist, and energy healer with 30 years of experience.
