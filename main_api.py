@@ -14,24 +14,19 @@ CORS(app, resources={
     }
 })
 
-# In-memory storage (in production, use a database)
+# In-memory storage
 leads_db = {}
 
 def calculate_life_path(birthdate):
     """Calculate Life Path number from birthdate"""
     try:
-        # Parse date
         date_obj = datetime.strptime(birthdate, '%Y-%m-%d')
-        
-        # Sum all digits in the date
         date_str = date_obj.strftime('%Y%m%d')
         total = sum(int(digit) for digit in date_str)
         
-        # Reduce to single digit (except 11, 22, 33)
         while total > 9 and total not in [11, 22, 33]:
             total = sum(int(digit) for digit in str(total))
         
-        # Life Path meanings
         meanings = {
             1: "The Leader - Independent, pioneering, and ambitious",
             2: "The Peacemaker - Diplomatic, sensitive, and cooperative",
@@ -82,7 +77,6 @@ def calculate_life_path_endpoint():
         if 'error' in result:
             return jsonify({'error': result['error']}), 400
         
-        # Store lead
         if email:
             lead_id = f"lead_{datetime.now().timestamp()}"
             leads_db[lead_id] = {
@@ -117,13 +111,15 @@ def get_leads():
 
 @app.route('/api/reports/generate-full', methods=['POST'])
 def generate_full_report():
-    """Generate complete AI-powered numerology report"""
+    """Generate premium AI-powered numerology report"""
     try:
         import anthropic
         
         data = request.json
         name = data.get('name')
         birthdate = data.get('birthdate')
+        birthtime = data.get('birthtime', 'Not provided')
+        birthplace = data.get('birthplace', 'Not provided')
         email = data.get('email')
         
         if not name or not birthdate:
@@ -140,113 +136,270 @@ def generate_full_report():
             
         client = anthropic.Anthropic(api_key=api_key)
         
-        # Generate comprehensive AI report
+        # Calculate age and dates
         current_year = datetime.now().year
         birth_date_obj = datetime.strptime(birthdate, '%Y-%m-%d')
         age = current_year - birth_date_obj.year
         birth_month = birth_date_obj.month
         birth_day = birth_date_obj.day
         
-        # Optimized prompt for faster generation
-        prompt = f"""You are a master numerologist creating a premium personalized report.
+        # Premium AI prompt with clear structure
+        prompt = f"""You are a master numerologist creating a premium, professional report worth $47.
 
-Create a comprehensive numerology analysis for:
-Name: {name}
-Life Path Number: {life_path}
-Birth Date: {birth_month}/{birth_day}/{birth_date_obj.year}
-Current Age: {age}
-Current Year: {current_year}
+Create a comprehensive, well-structured numerology analysis for:
+- Full Name: {name}
+- Birth Date: {birth_month}/{birth_day}/{birth_date_obj.year}
+- Birth Time: {birthtime}
+- Birth Place: {birthplace}
+- Life Path Number: {life_path}
+- Current Age: {age} years old
+- Current Year: {current_year}
 
-# COMPLETE NUMEROLOGY REPORT FOR {name}
+# PREMIUM NUMEROLOGY REPORT
 
-## PART 1: YOUR LIFE PATH {life_path}
+## EXECUTIVE SUMMARY
 
-Write 4-5 paragraphs covering:
-- Deep meaning of Life Path {life_path} for {name}
-- Natural strengths and gifts (list 8-10 specific ones)
-- Life lessons and challenges
-- Soul purpose and mission
-
-## PART 2: CAREER & MONEY
-
-Write 3-4 paragraphs including:
-- Ideal career paths (list top 10 with brief explanations)
-- Best business opportunities
-- Money manifestation strategy for Life Path {life_path}
-- Professional development for {current_year}-{current_year + 5}
-
-## PART 3: RELATIONSHIPS & LOVE
-
-Write 3-4 paragraphs covering:
-- What {name} needs in relationships
-- Compatibility scores with Life Paths 1-9, 11, 22, 33 (give percentage for each)
-- Best years for love: {current_year}-{current_year + 10}
-- Twin flame and soulmate guidance
-
-## PART 4: YEAR-BY-YEAR FORECAST
-
-Provide guidance for these years:
-- {current_year}: Main theme, opportunities, challenges
-- {current_year + 1}: Focus areas and timing
-- {current_year + 2}: Key developments
-- {current_year + 5}: Major milestone year
-- Ages {age + 5}, {age + 10}, {age + 15}: What to expect
-
-## PART 5: SPIRITUAL GUIDANCE
-
-Write 3 paragraphs on:
-- Past life influences on this lifetime
-- Spiritual gifts and psychic abilities
-- Chakra system alignment for Life Path {life_path}
-- Sacred practices and rituals
-
-## PART 6: LUCKY TIMING & DATES
-
-Provide:
-- Best months in {current_year} for: career, love, money, health
-- Lucky days of the month for Life Path {life_path}
-- Optimal years for major life events through 2050
-
-## PART 7: BUSINESS GUIDANCE
-
-Include:
-- Should {name} be an entrepreneur? (score 1-10)
-- 5 business name suggestions with numerology calculations
-- Best business launch timing in {current_year}-{current_year + 1}
-
-## PART 8: ACTION PLAN
-
-Provide:
-- 90-day action plan (specific weekly steps)
-- 1-year goals aligned with destiny
-- 5-year vision for age {age + 5}
-- Life vision for 2050
-
-## PART 9: POWER TOOLS
-
-Include:
-- 15 powerful affirmations for Life Path {life_path}
-- Daily rituals and practices
-- Crystals, colors, and frequencies
-
-## CONCLUSION
-
-3-4 paragraphs of encouragement and empowerment
+Write a powerful 3-paragraph summary that captures:
+- The essence of {name}'s soul and life purpose
+- The most important message they need to hear right now
+- What makes their journey unique and special
 
 ---
-INSTRUCTIONS:
-- Use {name}'s name 30+ times
-- Write in warm second person ("you")
-- Be specific with dates, ages, percentages
-- Give actionable advice
-- Target length: 4000-5000 words
-- Make it feel personal and valuable"""
-        
-        # Stream response to prevent timeout
+
+## SECTION 1: YOUR LIFE PATH {life_path} - THE FOUNDATION
+
+### What Life Path {life_path} Means for You
+
+Write 4-5 paragraphs explaining:
+- The deep spiritual meaning of this path
+- Why your soul chose this number
+- What makes you different from others
+- Your ultimate life purpose
+
+### Your Natural Gifts & Strengths
+
+List and explain 10 specific strengths:
+1. [Strength]: How it shows up in your life and how to use it
+2. [Strength]: Practical applications and examples
+[Continue through 10]
+
+### Your Life Lessons & Challenges
+
+Describe 5-6 key lessons:
+- What the lesson is
+- Why you're learning it
+- How to recognize when you're in it
+- Steps to move through it successfully
+
+---
+
+## SECTION 2: YOUR LIFE JOURNEY - PAST, PRESENT & FUTURE
+
+### THE PAST: Ages 0-{age} (Your Journey So Far)
+
+Write 3-4 paragraphs about:
+- Major themes in childhood (ages 0-18)
+- Young adult years (ages 18-30) - key developments
+- Recent years - how the past shaped you
+- Patterns you've been working through
+
+**Note:** When mentioning "age 33" or any specific age, always explain what that means - e.g., "At age 33 (the year {birth_date_obj.year + 33}, which was {current_year - (birth_date_obj.year + 33)} years ago)" so it's crystal clear.
+
+### THE PRESENT: Age {age} in {current_year}
+
+Write 3-4 paragraphs covering:
+- Where you are right now in your journey
+- Current life theme and energy
+- What you're being called to focus on THIS YEAR
+- Opportunities available to you right now
+- Challenges to navigate in {current_year}
+
+### THE FUTURE: Your Next 30 Years
+
+**Ages {age + 1} to {age + 5} ({current_year + 1}-{current_year + 5}):**
+For each year, provide:
+- Main theme
+- Key opportunities
+- What to focus on
+- Important decisions to make
+
+**Ages {age + 6} to {age + 15} ({current_year + 6}-{current_year + 15}):**
+Overview of this decade with major milestones at ages {age + 7}, {age + 10}, {age + 13}
+
+**Ages {age + 16} to {age + 30} ({current_year + 16}-{current_year + 30}):**
+Long-term vision and major life events at ages {age + 20}, {age + 25}, {age + 30}
+
+Always use format: "Age X (year YYYY)" so it's clear.
+
+---
+
+## SECTION 3: CAREER & FINANCIAL SUCCESS
+
+### Your Professional Path
+
+Write 3 paragraphs on:
+- Your ideal career direction
+- Natural talents you can monetize
+- Work environments where you thrive
+
+### Top 10 Career Recommendations
+
+For each career:
+1. **[Career Title]**
+   - Why it's perfect for you
+   - Skills you already have
+   - Income potential: $X-$Y
+   - First steps to pursue it
+
+### Financial Prosperity Timeline
+
+- **{current_year}-{current_year + 2}:** Financial focus and opportunities
+- **{current_year + 3}-{current_year + 5}:** Building wealth phase
+- **{current_year + 6}-{current_year + 10}:** Peak earning years
+- **Best years for major investments:** [list specific years]
+
+---
+
+## SECTION 4: LOVE & RELATIONSHIPS
+
+### Your Relationship Blueprint
+
+Write 3 paragraphs on:
+- What you truly need in a partner
+- Your love language and style
+- Patterns to be aware of
+
+### Compatibility Guide
+
+For EACH Life Path number (1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22, 33), provide:
+
+**Life Path {life_path} + Life Path [X]**
+- Romantic Compatibility: X/100
+- What works well: [2-3 points]
+- Main challenges: [2 points]
+- How to make it thrive: [advice]
+
+### Love Timeline
+
+- **{current_year}:** What to expect in love this year
+- **{current_year + 1}-{current_year + 3}:** Relationship forecast
+- **Best years to meet someone special:** [list years]
+- **Best years for marriage/commitment:** [list years]
+- **Soul mate indicators:** What to look for
+
+---
+
+## SECTION 5: HEALTH & WELLBEING
+
+### Physical Health Guidance
+
+- Body systems to nurture
+- Exercise types that work best for you
+- Nutritional guidance
+- Sleep and rest needs
+- Preventive care priorities
+
+### Emotional & Mental Wellness
+
+- Emotional patterns to understand
+- Stress management strategies
+- Mental health practices
+- Work-life balance tips
+
+### Health Timeline
+
+- **Ages to prioritize health:** [list specific ages with years]
+- **{current_year}:** Health focus areas
+- **Long-term wellness strategy**
+
+---
+
+## SECTION 6: SPIRITUAL DEVELOPMENT
+
+### Your Spiritual Gifts
+
+Describe 5-7 spiritual abilities you have or will develop
+
+### Sacred Practices for You
+
+- Daily rituals
+- Meditation techniques
+- Journaling prompts
+- Moon rituals
+- Altar setup
+
+### Your Soul's Evolution
+
+- Where you are spiritually right now
+- Next level of awakening
+- How to accelerate your growth
+
+---
+
+## SECTION 7: YOUR 90-DAY ACTION PLAN
+
+### Month 1: Foundation
+- Week 1: [specific actions]
+- Week 2: [specific actions]
+- Week 3: [specific actions]
+- Week 4: [specific actions]
+
+### Month 2: Momentum
+[Same structure]
+
+### Month 3: Transformation
+[Same structure]
+
+### Quick Wins You Can Achieve This Week
+List 10 immediate actions
+
+---
+
+## SECTION 8: POWER TOOLS
+
+### 20 Affirmations for Life Path {life_path}
+
+1. "I am..." [specific affirmation]
+2. "I trust..." [specific affirmation]
+[Continue through 20]
+
+### Lucky Numbers & Timing
+
+- Your power numbers: [list]
+- Best days of the month: [list]
+- Lucky colors: [list]
+- Beneficial crystals: [list]
+
+---
+
+## CLOSING MESSAGE
+
+Write 3-4 final paragraphs:
+- Acknowledging their unique journey
+- Empowering them to step into their power
+- Invitation to live their highest potential
+- Words of encouragement and blessing
+
+---
+
+**CRITICAL WRITING INSTRUCTIONS:**
+
+1. **Always use full context for ages:** "At age 33 (in the year {birth_date_obj.year + 33})" not just "at age 33"
+2. **Use {name}'s name 40+ times** throughout to make it personal
+3. **Write in warm, encouraging second person** ("you", "your")
+4. **Be specific:** Include exact years, ages, percentages, numbers
+5. **Explain everything clearly:** Assume reader knows nothing about numerology
+6. **No jargon without explanation**
+7. **Make it actionable:** Every section should have practical steps
+8. **Target length: 5,000-6,000 words**
+9. **Professional tone:** This is a premium $47 product
+10. **No blank sections:** Every part must be filled with valuable content"""
+
+        # Generate with streaming to prevent timeout
         full_report = ""
         with client.messages.stream(
             model="claude-sonnet-4-20250514",
-            max_tokens=3000,
+            max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
         ) as stream:
             for text in stream.text_stream:
@@ -260,6 +413,8 @@ INSTRUCTIONS:
                 'email': email,
                 'name': name,
                 'birthdate': birthdate,
+                'birthtime': birthtime,
+                'birthplace': birthplace,
                 'life_path': life_path,
                 'created_at': datetime.now().isoformat(),
                 'purchased_full_report': True
@@ -270,6 +425,9 @@ INSTRUCTIONS:
             'data': {
                 'name': name,
                 'life_path': life_path,
+                'birthdate': birthdate,
+                'birthtime': birthtime,
+                'birthplace': birthplace,
                 'report': full_report,
                 'generated_at': datetime.now().isoformat()
             }
@@ -284,160 +442,202 @@ INSTRUCTIONS:
 
 @app.route('/api/reports/download-pdf', methods=['POST'])
 def download_pdf():
-    """Generate and download PDF version of report"""
+    """Generate premium PDF with professional design"""
     try:
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.units import inch
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
-        from reportlab.lib.enums import TA_CENTER, TA_LEFT
-        from reportlab.lib.colors import HexColor
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+        from reportlab.lib.colors import HexColor, white
         
         data = request.json
         report_content = data.get('report')
         customer_name = data.get('name')
         life_path = data.get('life_path')
+        birthdate = data.get('birthdate', 'Not provided')
+        birthtime = data.get('birthtime', 'Not provided')
+        birthplace = data.get('birthplace', 'Not provided')
         
         if not report_content:
             return jsonify({'error': 'No report content provided'}), 400
         
-        # Create PDF in memory
+        # Create PDF
         buffer = BytesIO()
         doc = SimpleDocTemplate(
-            buffer, 
+            buffer,
             pagesize=letter,
-            topMargin=0.75*inch, 
+            topMargin=0.5*inch,
             bottomMargin=0.75*inch,
-            leftMargin=1*inch, 
+            leftMargin=1*inch,
             rightMargin=1*inch
         )
         
         # Styles
         styles = getSampleStyleSheet()
         
-        title_style = ParagraphStyle(
-            'CustomTitle',
+        # Cover page title
+        cover_title = ParagraphStyle(
+            'CoverTitle',
             parent=styles['Heading1'],
-            fontSize=28,
+            fontSize=36,
             textColor=HexColor('#667eea'),
-            spaceAfter=30,
-            spaceBefore=20,
+            spaceAfter=20,
             alignment=TA_CENTER,
             fontName='Helvetica-Bold'
         )
         
-        heading1_style = ParagraphStyle(
-            'CustomHeading1',
+        # Cover subtitle
+        cover_subtitle = ParagraphStyle(
+            'CoverSubtitle',
+            parent=styles['Normal'],
+            fontSize=18,
+            textColor=HexColor('#764ba2'),
+            spaceAfter=40,
+            alignment=TA_CENTER,
+            fontName='Helvetica'
+        )
+        
+        # Section headings
+        h1_style = ParagraphStyle(
+            'CustomH1',
             parent=styles['Heading1'],
-            fontSize=16,
+            fontSize=20,
             textColor=HexColor('#667eea'),
-            spaceAfter=12,
-            spaceBefore=24,
+            spaceAfter=15,
+            spaceBefore=30,
             fontName='Helvetica-Bold',
-            keepWithNext=True
+            borderWidth=2,
+            borderColor=HexColor('#667eea'),
+            borderPadding=10,
+            backColor=HexColor('#f0f4ff')
         )
         
-        heading2_style = ParagraphStyle(
-            'CustomHeading2',
+        h2_style = ParagraphStyle(
+            'CustomH2',
             parent=styles['Heading2'],
-            fontSize=13,
+            fontSize=16,
             textColor=HexColor('#34495e'),
-            spaceAfter=10,
-            spaceBefore=16,
+            spaceAfter=12,
+            spaceBefore=20,
             fontName='Helvetica-Bold',
-            keepWithNext=True
+            borderWidth=1,
+            borderColor=HexColor('#e2e8f0'),
+            borderPadding=5
         )
         
-        heading3_style = ParagraphStyle(
-            'CustomHeading3',
+        h3_style = ParagraphStyle(
+            'CustomH3',
             parent=styles['Heading3'],
-            fontSize=11,
+            fontSize=13,
             textColor=HexColor('#2c3e50'),
             spaceAfter=8,
             spaceBefore=12,
-            fontName='Helvetica-Bold',
-            keepWithNext=True
+            fontName='Helvetica-Bold'
         )
         
         body_style = ParagraphStyle(
             'CustomBody',
             parent=styles['BodyText'],
-            fontSize=10,
-            leading=14,
-            spaceAfter=8,
-            alignment=TA_LEFT,
+            fontSize=11,
+            leading=16,
+            spaceAfter=10,
+            alignment=TA_JUSTIFY,
             fontName='Helvetica'
         )
         
         # Build document
         story = []
         
-        # Title page
-        story.append(Spacer(1, 2*inch))
-        story.append(Paragraph("THE COMPLETE LIFE BLUEPRINT", title_style))
-        story.append(Spacer(1, 0.2*inch))
-        story.append(Paragraph("Your Comprehensive Numerology Report", heading2_style))
+        # COVER PAGE
+        story.append(Spacer(1, 2.5*inch))
+        story.append(Paragraph("✨ YOUR PREMIUM NUMEROLOGY REPORT ✨", cover_title))
+        story.append(Paragraph("Complete Life Blueprint & Guidance", cover_subtitle))
         story.append(Spacer(1, 0.5*inch))
-        story.append(Paragraph(f"Prepared for {customer_name}", heading2_style))
-        story.append(Paragraph(f"Life Path Number: {life_path}", heading2_style))
-        story.append(Spacer(1, 0.3*inch))
-        story.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y')}", body_style))
+        
+        # Cover details table
+        cover_data = [
+            ['Prepared For:', customer_name],
+            ['Life Path Number:', str(life_path)],
+            ['Birth Date:', birthdate],
+            ['Birth Time:', birthtime],
+            ['Birth Place:', birthplace],
+            ['Report Generated:', datetime.now().strftime('%B %d, %Y')]
+        ]
+        
+        cover_table = Table(cover_data, colWidths=[2*inch, 4*inch])
+        cover_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('TEXTCOLOR', (0, 0), (0, -1), HexColor('#667eea')),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LINEBELOW', (0, 0), (-1, -2), 1, HexColor('#e2e8f0')),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        
+        story.append(cover_table)
+        story.append(Spacer(1, 1*inch))
+        
+        # Footer text
+        footer = Paragraph(
+            "This report is a personalized analysis created exclusively for you.<br/>© Arthnumro - Premium Numerology Services",
+            ParagraphStyle('Footer', parent=body_style, fontSize=9, textColor=HexColor('#718096'), alignment=TA_CENTER)
+        )
+        story.append(footer)
         story.append(PageBreak())
         
-        # Process report content
+        # PROCESS REPORT CONTENT
         lines = report_content.split('\n')
         
         for line in lines:
             line = line.strip()
             
             if not line:
-                story.append(Spacer(1, 0.08*inch))
+                story.append(Spacer(1, 0.1*inch))
                 continue
             
-            # Skip horizontal rules
             if line.startswith('---'):
-                story.append(Spacer(1, 0.15*inch))
+                story.append(Spacer(1, 0.2*inch))
                 continue
             
-            # Main headings (# )
+            # Main headings
             if line.startswith('# '):
                 text = line.replace('# ', '').strip()
                 story.append(PageBreak())
-                story.append(Paragraph(text, heading1_style))
+                story.append(Paragraph(text, h1_style))
             
-            # Subheadings (## )
+            # Subheadings
             elif line.startswith('## '):
                 text = line.replace('## ', '').strip()
                 story.append(Spacer(1, 0.15*inch))
-                story.append(Paragraph(text, heading2_style))
+                story.append(Paragraph(text, h2_style))
             
-            # Sub-subheadings (### )
+            # Sub-subheadings
             elif line.startswith('### '):
                 text = line.replace('### ', '').strip()
-                story.append(Paragraph(text, heading3_style))
+                story.append(Paragraph(text, h3_style))
             
-            # Handle bold/emphasis (**text**)
+            # Body text
             else:
-                # Convert markdown bold to HTML bold
+                # Convert markdown
                 text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
-                # Convert single asterisks to italic
                 text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<i>\1</i>', text)
                 
                 try:
                     story.append(Paragraph(text, body_style))
                 except:
-                    # If paragraph fails, try with cleaned text
-                    cleaned_text = text.replace('<', '&lt;').replace('>', '&gt;')
-                    story.append(Paragraph(cleaned_text, body_style))
+                    cleaned = text.replace('<', '&lt;').replace('>', '&gt;')
+                    story.append(Paragraph(cleaned, body_style))
         
         # Build PDF
         doc.build(story)
         
-        # Get PDF data
         pdf_data = buffer.getvalue()
         buffer.close()
         
-        # Return as downloadable file
         pdf_buffer = BytesIO(pdf_data)
         pdf_buffer.seek(0)
         
@@ -450,9 +650,8 @@ def download_pdf():
         
     except Exception as e:
         import traceback
-        error_detail = traceback.format_exc()
-        print(f"PDF Error: {error_detail}")
-        return jsonify({'error': str(e), 'detail': error_detail}), 500
+        print(f"PDF Error: {traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
