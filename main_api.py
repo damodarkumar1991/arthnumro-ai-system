@@ -117,6 +117,171 @@ def get_leads():
 
 @app.route('/api/reports/generate-full', methods=['POST'])
 def generate_full_report():
+@app.route('/api/reports/generate-full-stream', methods=['POST'])
+def generate_full_report_stream():
+    """Generate report with streaming to prevent timeout"""
+    try:
+        import anthropic
+        
+        data = request.json
+        name = data.get('name')
+        birthdate = data.get('birthdate')
+        email = data.get('email')
+        
+        if not name or not birthdate:
+            return jsonify({'error': 'Name and birthdate required'}), 400
+        
+        # Calculate Life Path number
+        life_path_result = calculate_life_path(birthdate)
+        life_path = life_path_result['number']
+        
+        # Initialize Claude
+        api_key = os.environ.get('ANTHROPIC_API_KEY')
+        if not api_key:
+            return jsonify({'error': 'API key not configured'}), 500
+            
+        client = anthropic.Anthropic(api_key=api_key)
+        
+        # Generate with streaming
+        current_year = datetime.now().year
+        birth_date_obj = datetime.strptime(birthdate, '%Y-%m-%d')
+        age = current_year - birth_date_obj.year
+        birth_month = birth_date_obj.month
+        birth_day = birth_date_obj.day
+        
+        # Shorter prompt for faster generation
+        prompt = f"""You are a master numerologist creating a premium personalized report.
+
+Create a comprehensive numerology analysis for:
+Name: {name}
+Life Path Number: {life_path}
+Birth Date: {birth_month}/{birth_day}/{birth_date_obj.year}
+Current Age: {age}
+Current Year: {current_year}
+
+# COMPLETE NUMEROLOGY REPORT FOR {name}
+
+## PART 1: YOUR LIFE PATH {life_path}
+
+Write 4-5 paragraphs covering:
+- Deep meaning of Life Path {life_path} for {name}
+- Natural strengths and gifts (list 8-10 specific ones)
+- Life lessons and challenges
+- Soul purpose and mission
+
+## PART 2: CAREER & MONEY
+
+Write 3-4 paragraphs including:
+- Ideal career paths (list top 10 with brief explanations)
+- Best business opportunities
+- Money manifestation strategy for Life Path {life_path}
+- Professional development for {current_year}-{current_year + 5}
+
+## PART 3: RELATIONSHIPS & LOVE
+
+Write 3-4 paragraphs covering:
+- What {name} needs in relationships
+- Compatibility scores with Life Paths 1-9, 11, 22, 33 (give percentage for each)
+- Best years for love: {current_year}-{current_year + 10}
+- Twin flame and soulmate guidance
+
+## PART 4: YEAR-BY-YEAR FORECAST
+
+Provide guidance for these years:
+- {current_year}: Main theme, opportunities, challenges
+- {current_year + 1}: Focus areas and timing
+- {current_year + 2}: Key developments
+- {current_year + 5}: Major milestone year
+- Ages {age + 5}, {age + 10}, {age + 15}: What to expect
+
+## PART 5: SPIRITUAL GUIDANCE
+
+Write 3 paragraphs on:
+- Past life influences on this lifetime
+- Spiritual gifts and psychic abilities
+- Chakra system alignment for Life Path {life_path}
+- Sacred practices and rituals
+
+## PART 6: LUCKY TIMING & DATES
+
+Provide:
+- Best months in {current_year} for: career, love, money, health
+- Lucky days of the month for Life Path {life_path}
+- Optimal years for major life events through 2050
+
+## PART 7: BUSINESS GUIDANCE
+
+Include:
+- Should {name} be an entrepreneur? (score 1-10)
+- 5 business name suggestions with numerology calculations
+- Best business launch timing in {current_year}-{current_year + 1}
+
+## PART 8: ACTION PLAN
+
+Provide:
+- 90-day action plan (specific weekly steps)
+- 1-year goals aligned with destiny
+- 5-year vision for age {age + 5}
+- Life vision for 2050
+
+## PART 9: POWER TOOLS
+
+Include:
+- 15 powerful affirmations for Life Path {life_path}
+- Daily rituals and practices
+- Crystals, colors, and frequencies
+
+## CONCLUSION
+
+3-4 paragraphs of encouragement and empowerment
+
+---
+INSTRUCTIONS:
+- Use {name}'s name 30+ times
+- Write in warm second person ("you")
+- Be specific with dates, ages, percentages
+- Give actionable advice
+- Target length: 4000-5000 words
+- Make it feel personal and valuable"""
+        
+        # Stream response
+        full_report = ""
+        with client.messages.stream(
+            model="claude-sonnet-4-20250514",
+            max_tokens=3000,
+            messages=[{"role": "user", "content": prompt}]
+        ) as stream:
+            for text in stream.text_stream:
+                full_report += text
+        
+        # Store lead
+        if email:
+            lead_id = f"lead_{datetime.now().timestamp()}"
+            leads_db[lead_id] = {
+                'id': lead_id,
+                'email': email,
+                'name': name,
+                'birthdate': birthdate,
+                'life_path': life_path,
+                'created_at': datetime.now().isoformat(),
+                'purchased_full_report': True
+            }
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'name': name,
+                'life_path': life_path,
+                'report': full_report,
+                'generated_at': datetime.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Error generating report: {error_detail}")
+        return jsonify({'error': str(e), 'detail': error_detail}), 500
     """Generate complete AI-powered numerology report"""
     try:
         import anthropic
