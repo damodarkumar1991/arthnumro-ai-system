@@ -928,6 +928,199 @@ def download_pdf():
         import traceback
         print(f"PDF Error: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
+@app.route('/api/mini-report', methods=['POST'])
+def send_mini_report():
+    """Send mini report email after free calculator use"""
+    try:
+        import resend
+
+        data = request.json
+        name = data.get('name')
+        email = data.get('email')
+        life_path = data.get('life_path')
+        dob = data.get('dob', '')
+
+        if not name or not email or not life_path:
+            return jsonify({'error': 'Name, email and life_path required'}), 400
+
+        resend.api_key = os.environ.get('RESEND_API_KEY')
+
+        # Life Path data for email
+        lp_data = {
+            1:  {"name": "The Leader",       "desc": "You are a natural pioneer. Independent, courageous, and fiercely original — you are here to forge your own path and lead others forward.", "traits": "Independent · Pioneering · Courageous · Driven"},
+            2:  {"name": "The Collaborator", "desc": "You are one of the most intuitive souls alive. You feel the energy in a room before a word is spoken. Your gift is connection, diplomacy, and deep empathy.", "traits": "Empathetic · Intuitive · Diplomatic · Cooperative"},
+            3:  {"name": "The Creator",      "desc": "You came into this world to express. Whether through words, art, or personality — you have a magnetism that draws people in effortlessly.", "traits": "Creative · Expressive · Charismatic · Joyful"},
+            4:  {"name": "The Builder",      "desc": "You are the foundation upon which great things are built. Disciplined, methodical, and deeply reliable — you create things that last.", "traits": "Disciplined · Reliable · Practical · Grounded"},
+            5:  {"name": "The Explorer",     "desc": "You are the most dynamic of all Life Paths. Change is not something you endure — it's the air you breathe. You thrive in freedom and variety.", "traits": "Adventurous · Versatile · Free-spirited · Curious"},
+            6:  {"name": "The Nurturer",     "desc": "You are the heart of every room you enter. Compassionate, protective, and wise about human nature — your love is a genuine force of healing.", "traits": "Nurturing · Compassionate · Responsible · Warm"},
+            7:  {"name": "The Seeker",       "desc": "You are the most spiritually attuned of all Life Paths. Drawn to the deeper questions of existence, you observe what others miss entirely.", "traits": "Analytical · Spiritual · Introspective · Wise"},
+            8:  {"name": "The Achiever",     "desc": "You are here to master the material world. Ambitious, strategic, and powerfully magnetic — you understand authority and success at an instinctive level.", "traits": "Ambitious · Strategic · Powerful · Visionary"},
+            9:  {"name": "The Humanitarian", "desc": "You are the oldest soul of all Life Paths — compassionate, wise, and driven by a purpose larger than personal gain. You are here to serve.", "traits": "Compassionate · Wise · Generous · Transformative"},
+            11: {"name": "The Illuminator",  "desc": "You carry one of the rarest numbers in numerology. A Master Number — your potential for spiritual insight and impact is extraordinary.", "traits": "Intuitive · Visionary · Inspirational · Gifted"},
+            22: {"name": "The Master Builder","desc": "Life Path 22 is the most powerful number in all of numerology. You have the vision of an 11 and the practicality of a 4 — you turn dreams into reality.", "traits": "Visionary · Practical · Powerful · Legacy-driven"},
+            33: {"name": "The Master Teacher","desc": "Life Path 33 is the most compassionate of all Master Numbers. You are here to uplift humanity through love, teaching, and healing.", "traits": "Compassionate · Teaching · Healing · Devoted"}
+        }
+
+        lp = lp_data.get(int(life_path), lp_data[9])
+        current_year = datetime.now().year
+
+        # Build the email HTML
+        html_body = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Free Numerology Reading</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f0e8;font-family:'Helvetica Neue',Arial,sans-serif;">
+
+  <!-- Wrapper -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f0e8;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:#1a1a2e;border-radius:16px 16px 0 0;padding:40px 40px 36px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.25em;color:#d4a843;">✦ ARTHNUMRO ✦</p>
+              <h1 style="margin:0;font-family:Georgia,serif;font-size:28px;font-weight:400;color:#f5f0e8;line-height:1.2;">
+                Your Free Numerology<br><em style="color:#d4a843;">Mini Report</em>
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Life Path reveal -->
+          <tr>
+            <td style="background:#0d0d1a;padding:40px;text-align:center;">
+              <p style="margin:0 0 10px;font-size:10px;letter-spacing:0.3em;color:#d4a843;">YOUR LIFE PATH NUMBER</p>
+              <p style="margin:0;font-family:Georgia,serif;font-size:88px;color:#d4a843;line-height:1;">{life_path}</p>
+              <p style="margin:8px 0 0;font-family:Georgia,serif;font-size:22px;font-style:italic;color:#f5f0e8;">{lp['name']}</p>
+            </td>
+          </tr>
+
+          <!-- Description -->
+          <tr>
+            <td style="background:#ffffff;padding:36px 40px;">
+              <p style="margin:0 0 6px;font-size:10px;letter-spacing:0.2em;color:#d4a843;font-weight:600;">DEAR {name.upper()},</p>
+              <h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;font-weight:400;color:#1a1a2e;">Your Reading</h2>
+              <p style="margin:0 0 16px;font-size:14px;color:#444;line-height:1.8;">{lp['desc']}</p>
+              <p style="margin:0 0 20px;font-size:14px;color:#444;line-height:1.8;">
+                As a Life Path {life_path}, you carry a specific set of gifts, challenges, and soul lessons into this lifetime. 
+                Your number reveals not just who you are — but who you are becoming, and the timing of when your greatest chapters unfold.
+              </p>
+              <!-- Traits pills -->
+              <p style="margin:0 0 8px;font-size:10px;letter-spacing:0.15em;color:#8a6830;">YOUR CORE TRAITS</p>
+              <p style="margin:0;font-size:13px;color:#8a6830;letter-spacing:0.05em;background:#faf5ec;padding:12px 16px;border-radius:8px;border:1px solid #e8d9be;">{lp['traits']}</p>
+            </td>
+          </tr>
+
+          <!-- What you're missing / teaser -->
+          <tr>
+            <td style="background:#f9f5ee;padding:32px 40px;border-top:1px solid #e8e0d4;border-bottom:1px solid #e8e0d4;">
+              <p style="margin:0 0 16px;font-size:10px;letter-spacing:0.2em;color:#8a6830;font-weight:600;">YOUR COMPLETE CHART INCLUDES</p>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:9px 0;border-bottom:1px solid #e8d9be;font-size:13px;color:#444;">Expression Number</td>
+                  <td style="padding:9px 0;border-bottom:1px solid #e8d9be;font-size:11px;color:#bbb;text-align:right;">🔒 Full report only</td>
+                </tr>
+                <tr>
+                  <td style="padding:9px 0;border-bottom:1px solid #e8d9be;font-size:13px;color:#444;">Soul Urge Number</td>
+                  <td style="padding:9px 0;border-bottom:1px solid #e8d9be;font-size:11px;color:#bbb;text-align:right;">🔒 Full report only</td>
+                </tr>
+                <tr>
+                  <td style="padding:9px 0;border-bottom:1px solid #e8d9be;font-size:13px;color:#444;">Personality Number</td>
+                  <td style="padding:9px 0;border-bottom:1px solid #e8d9be;font-size:11px;color:#bbb;text-align:right;">🔒 Full report only</td>
+                </tr>
+                <tr>
+                  <td style="padding:9px 0;border-bottom:1px solid #e8d9be;font-size:13px;color:#444;">Personal Year {current_year}</td>
+                  <td style="padding:9px 0;border-bottom:1px solid #e8d9be;font-size:11px;color:#bbb;text-align:right;">🔒 Full report only</td>
+                </tr>
+                <tr>
+                  <td style="padding:9px 0;font-size:13px;color:#444;">Year-by-Year Forecast to 2050</td>
+                  <td style="padding:9px 0;font-size:11px;color:#bbb;text-align:right;">🔒 Full report only</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Upsell block -->
+          <tr>
+            <td style="background:#1a1a2e;padding:40px;text-align:center;">
+              <!-- Top accent line -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="height:2px;background:linear-gradient(90deg,#d4a843,#8b6fb5,#d4a843);border-radius:2px;"></td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 6px;font-size:10px;letter-spacing:0.22em;color:rgba(212,168,67,0.8);">⏰ 24-HOUR EXCLUSIVE OFFER</p>
+              <h2 style="margin:0 0 12px;font-family:Georgia,serif;font-size:26px;font-weight:400;color:#f5f0e8;line-height:1.2;">
+                Unlock Your <em style="color:#d4a843;">Complete</em><br>Life Blueprint
+              </h2>
+              <p style="margin:0 0 24px;font-size:13px;color:rgba(245,240,232,0.65);line-height:1.8;">
+                50+ pages of deeply personal guidance — including past life karma, 
+                chakra alignment, career roadmap, love compatibility, and a 
+                year-by-year forecast all the way through 2050.
+              </p>
+
+              <!-- Price -->
+              <p style="margin:0 0 6px;font-size:13px;color:rgba(255,255,255,0.35);text-decoration:line-through;">Regular price $19.99 AUD</p>
+              <p style="margin:0 0 24px;font-family:Georgia,serif;font-size:48px;color:#d4a843;line-height:1;">
+                $14.99 <span style="font-size:16px;color:rgba(212,168,67,0.7);">AUD</span>
+              </p>
+              <p style="margin:0 0 24px;font-size:12px;color:rgba(212,168,67,0.7);letter-spacing:0.08em;">THIS OFFER EXPIRES IN 24 HOURS</p>
+
+              <!-- CTA button -->
+              <a href="https://www.arthnumro.com/products/services-example-product-3"
+                 style="display:inline-block;padding:18px 44px;background:#d4a843;color:#1a1a2e;text-decoration:none;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;">
+                Claim My Discount Report →
+              </a>
+
+              <p style="margin:20px 0 0;font-size:10px;color:rgba(255,255,255,0.2);letter-spacing:0.06em;">
+                ✦ 100% satisfaction guaranteed or full refund
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f5f0e8;padding:24px 40px;text-align:center;border-radius:0 0 16px 16px;">
+              <p style="margin:0 0 6px;font-size:12px;color:#888;">
+                <a href="https://www.arthnumro.com" style="color:#d4a843;text-decoration:none;">arthnumro.com</a>
+              </p>
+              <p style="margin:0;font-size:10px;color:#bbb;line-height:1.6;">
+                You received this because you used our free numerology calculator.<br>
+                © {current_year} Arthnumro. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>"""
+
+        email_params = {
+            "from": "Arthnumro <reports@arthnumro.com>",
+            "to": [email],
+            "subject": f"✨ Your Life Path {life_path} Reading, {name} — Plus a 24-Hour Offer",
+            "html": html_body
+        }
+
+        resend.Emails.send(email_params)
+        print(f"✅ Mini report sent to {email}")
+
+        return jsonify({'success': True, 'message': 'Mini report sent'})
+
+    except Exception as e:
+        import traceback
+        print(f"⚠️ Mini report email failed: {e}")
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
