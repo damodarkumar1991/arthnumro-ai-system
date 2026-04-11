@@ -1122,7 +1122,91 @@ def send_mini_report():
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/chat/message', methods=['POST'])
+def chat_message():
+    """Handle chat messages with AI"""
+    try:
+        import anthropic
+        
+        data = request.json
+        user_id = data.get('user_id')
+        message = data.get('message')
+        user_data = data.get('user_data', {})
+        
+        if not message:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        # Initialize Claude
+        api_key = os.environ.get('ANTHROPIC_API_KEY')
+        if not api_key:
+            return jsonify({'error': 'API key not configured'}), 500
+            
+        client = anthropic.Anthropic(api_key=api_key)
+        
+        # Create personalized context
+        name = user_data.get('name', 'friend')
+        life_path = user_data.get('life_path', 'unknown')
+        birth_date = user_data.get('birth_date', 'unknown')
+        birth_time = user_data.get('birth_time', 'not provided')
+        birth_place = user_data.get('birth_place', 'not provided')
+        
+        # Calculate age if birth_date provided
+        age = "unknown"
+        if birth_date and birth_date != 'unknown':
+            try:
+                from datetime import datetime
+                birth_obj = datetime.strptime(birth_date, '%Y-%m-%d')
+                today = datetime.now()
+                age = today.year - birth_obj.year - ((today.month, today.day) < (birth_obj.month, birth_obj.day))
+            except:
+                pass
+        
+        # Create AI prompt
+        system_prompt = f"""You are a warm, insightful numerology AI guide speaking to {name}.
 
+Their numerology chart:
+- Life Path Number: {life_path}
+- Birth Date: {birth_date}
+- Birth Time: {birth_time}
+- Birth Place: {birth_place}
+- Current Age: {age}
+
+Guidelines:
+- Be warm, encouraging, and personal
+- Use their name ({name}) naturally in conversation
+- Give specific, actionable insights
+- Keep responses under 200 words unless they ask for detail
+- Be conversational, not formal
+- Reference their Life Path {life_path} when relevant
+- Provide practical guidance they can use today
+
+Remember: You're their trusted numerology guide who knows them personally."""
+
+        # Get AI response
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=500,
+            system=system_prompt,
+            messages=[{
+                "role": "user",
+                "content": message
+            }]
+        )
+        
+        ai_response = response.content[0].text
+        
+        return jsonify({
+            'success': True,
+            'response': ai_response,
+            'message_id': f"msg_{datetime.now().timestamp()}",
+            'user_message_id': f"user_msg_{datetime.now().timestamp()}"
+        })
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Chat error: {error_detail}")
+        return jsonify({'error': str(e), 'detail': error_detail}), 500
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
