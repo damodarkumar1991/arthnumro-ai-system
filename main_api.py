@@ -9,7 +9,8 @@ import bcrypt
 import hmac
 import hashlib
 import time
-import razorpay
+import requests as req_lib
+from requests.auth import HTTPBasicAuth
 
 app = Flask(__name__)
 CORS(app, resources={
@@ -34,7 +35,7 @@ RZP_KEY_ID     = os.environ.get('RAZORPAY_KEY_ID', '')
 RZP_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '')
 RZP_WEBHOOK_SECRET = os.environ.get('RAZORPAY_WEBHOOK_SECRET', '')
 
-rzp = razorpay.Client(auth=(RZP_KEY_ID, RZP_KEY_SECRET))
+
 
 # ── Question packs ───────────────────────────────────────────
 PACKS = {
@@ -437,16 +438,21 @@ def create_order(current_user):
 
         pack = PACKS[pack_key]
 
-        rzp_order = rzp.order.create({
-            'amount':   pack['amount_paise'],
-            'currency': 'INR',
-            'receipt':  f"an_{current_user['id'][:8]}_{int(time.time())}",
-            'notes': {
-                'user_id':    current_user['id'],
-                'user_email': current_user['email'],
-                'pack':       pack_key,
-            }
-        })
+        rzp_resp = req_lib.post(
+    'https://api.razorpay.com/v1/orders',
+    auth=HTTPBasicAuth(RZP_KEY_ID, RZP_KEY_SECRET),
+    json={
+        'amount':   pack['amount_paise'],
+        'currency': 'INR',
+        'receipt':  f"an_{current_user['id'][:8]}_{int(time.time())}",
+        'notes': {
+            'user_id':    current_user['id'],
+            'user_email': current_user['email'],
+            'pack':       pack_key,
+        }
+    }
+)
+rzp_order = rzp_resp.json()
 
         supabase.table('purchases').insert({
             'user_id':             current_user['id'],
